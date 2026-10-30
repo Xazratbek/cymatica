@@ -11,9 +11,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: "Umumiy"
-        case .appearance: "Ko'rinish"
-        case .about: "Haqida"
+        case .general: tr("Umumiy", "Основные", "General")
+        case .appearance: tr("Ko'rinish", "Внешний вид", "Appearance")
+        case .about: tr("Haqida", "О программе", "About")
         }
     }
 
@@ -36,17 +36,18 @@ final class SettingsNavigation {
 }
 
 private enum AppVersion {
-    static let displayString: String = {
+    static var displayString: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
-        return "Versiya \(version) (\(build))"
-    }()
+        return "\(tr("Versiya", "Версия", "Version")) \(version) (\(build))"
+    }
 }
 
 // MARK: - Root
 
 struct SettingsView: View {
     let actions: SettingsActions
+    @AppStorage("language") private var language = Language.uz.rawValue
     @State private var navigation = SettingsNavigation.shared
     @State private var history: [SettingsTab] = [.general]
     @State private var historyIndex = 0
@@ -69,16 +70,18 @@ struct SettingsView: View {
             }
             .listStyle(.sidebar)
             .scrollEdgeEffectStyleSoftIfAvailable()
-            .navigationTitle("Sozlamalar")
+            .navigationTitle(tr("Sozlamalar", "Настройки", "Settings"))
             .frame(width: 200)
             .navigationSplitViewColumnWidth(min: 200, ideal: 200, max: 200)
             .toolbar(removing: .sidebarToggle)
         } detail: {
             detail(for: navigation.selectedTab ?? .general)
         }
-        .navigationTitle("Sozlamalar")
+        .navigationTitle(tr("Sozlamalar", "Настройки", "Settings"))
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 660, minHeight: 540)
+        // Rebuild every label when the interface language changes.
+        .id(language)
         .toolbar {
             // Back/forward also makes SwiftUI create an NSToolbar, which the Liquid
             // Glass title bar needs.
@@ -123,6 +126,7 @@ struct SettingsView: View {
 
 private struct GeneralPane: View {
     let actions: SettingsActions
+    @AppStorage("language") private var language = Language.uz.rawValue
     @AppStorage("mode") private var mode = DisplayMode.mixed.rawValue
     @AppStorage("followRhythm") private var followRhythm = false
     @AppStorage("autoMode") private var autoMode = true
@@ -134,8 +138,17 @@ private struct GeneralPane: View {
 
     var body: some View {
         Form {
-            Section("Rejim") {
-                Picker("Qum nimani chizadi", selection: $mode) {
+            Section(tr("Til", "Язык", "Language")) {
+                Picker(tr("Ilova tili", "Язык приложения", "App language"), selection: $language) {
+                    ForEach(Language.allCases, id: \.rawValue) { language in
+                        Text(language.nativeName).tag(language.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            Section(tr("Rejim", "Режим", "Mode")) {
+                Picker(tr("Qum nimani chizadi", "Что рисует песок", "Sand draws"), selection: $mode) {
                     ForEach(DisplayMode.allCases, id: \.rawValue) { mode in
                         Text(mode.title).tag(mode.rawValue)
                     }
@@ -145,18 +158,23 @@ private struct GeneralPane: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Toggle(isOn: $followRhythm) {
-                    described("Musiqa ritmiga moslashsin",
-                              "Qum har zarbda sakraydi, naqsh zarb bilan almashadi, kamera tezligi musiqaning kuchiga qarab o'zgaradi. Soat raqamlari zarb bilan titraydi.")
+                    described(tr("Musiqa ritmiga moslashsin", "Следовать ритму музыки", "Follow the rhythm"),
+                              tr("Har zarbda chiziqlar orasidagi qum sakraydi va naqsh yorishadi, har taktda naqsh almashadi. Kamera tezligi musiqaning kuchiga qarab o'zgaradi.",
+                                 "На каждый удар песок между линиями подпрыгивает и фигура вспыхивает, на каждый такт фигура меняется. Скорость камеры зависит от силы музыки.",
+                                 "On every beat the loose sand leaps and the figure flares; the figure changes every bar. The camera speeds up with the music."))
                 }
                 .toggleStyle(.switch)
             }
 
-            Section("Avtomatik yoqilish") {
+            Section(tr("Avtomatik yoqilish", "Автоматическое включение", "Turning on")) {
                 Toggle(isOn: $autoMode) {
-                    described("Avtomatik yoqilsin", "Mac tegilmay turganda plastinka sekin paydo bo'ladi.")
+                    described(tr("Avtomatik yoqilsin", "Включаться автоматически", "Turn on automatically"),
+                              tr("Mac tegilmay turganda plastinka sekin paydo bo'ladi.",
+                                 "Когда Mac не трогают, пластина плавно появляется.",
+                                 "When the Mac is left alone, the plate fades in."))
                 }
                 .toggleStyle(.switch)
-                LabeledContent("Kutish vaqti") {
+                LabeledContent(tr("Kutish vaqti", "Ожидание", "Wait")) {
                     HStack(spacing: 12) {
                         Slider(value: rounded($idleSeconds, to: 5), in: 5...300)
                             .frame(width: 180)
@@ -168,48 +186,59 @@ private struct GeneralPane: View {
                 }
                 .disabled(!autoMode)
                 Toggle(isOn: $showWithoutMusic) {
-                    described("Musiqa bo'lmasa ham yoqilsin",
-                              "Telefondagi always on display kabi: soat doim ko'rinadi. Ekran uyg'oq turadi, batareya ko'proq sarflanadi.")
+                    described(tr("Musiqa bo'lmasa ham yoqilsin", "Включаться и без музыки", "Also without music"),
+                              tr("Telefondagi always on display kabi: soat doim ko'rinadi. Ekran uyg'oq turadi, batareya ko'proq sarflanadi.",
+                                 "Как always-on display на телефоне: часы видны всегда. Экран не гаснет, батарея расходуется быстрее.",
+                                 "Like a phone's always-on display: the clock stays visible. The screen stays awake and uses more battery."))
                 }
                 .toggleStyle(.switch)
                 .disabled(!autoMode)
                 Toggle(isOn: $respectVideo) {
-                    described("Video ko'rilayotganda yoqilmasin",
-                              "Boshqa ilova ekranni uyg'oq ushlab tursa (odatda video), plastinka chiqmaydi.")
+                    described(tr("Video ko'rilayotganda yoqilmasin", "Не включаться во время видео", "Stay hidden during video"),
+                              tr("Boshqa ilova ekranni uyg'oq ushlab tursa (odatda video), plastinka chiqmaydi.",
+                                 "Если другое приложение не даёт экрану погаснуть (обычно видео), пластина не появляется.",
+                                 "If another app keeps the screen awake (usually a video), the plate does not appear."))
                 }
                 .toggleStyle(.switch)
                 .disabled(!autoMode)
             }
 
-            Section("O'chirish") {
+            Section(tr("O'chirish", "Выключение", "Closing")) {
                 Toggle(isOn: Binding(get: { !keyboardDismisses }, set: { keyboardDismisses = !$0 })) {
-                    described("Klaviatura bosilganda o'chmasin",
-                              "Plastinka faqat trackpad yoki sichqoncha tegilganda yopiladi.")
+                    described(tr("Klaviatura bosilganda o'chmasin", "Не закрывать от клавиатуры", "Keys do not close it"),
+                              tr("Plastinka faqat trackpad yoki sichqoncha tegilganda yopiladi.",
+                                 "Пластина закрывается только от трекпада или мыши.",
+                                 "Only the trackpad or mouse closes the plate."))
                 }
                 .toggleStyle(.switch)
             }
 
-            Section("Ovoz") {
-                LabeledContent("Manba") {
+            Section(tr("Ovoz", "Звук", "Audio")) {
+                LabeledContent(tr("Manba", "Источник", "Source")) {
                     Text(actions.audioStatus())
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.trailing)
                 }
-                Button("Maxfiylik sozlamalarini ochish") {
+                Button(tr("Maxfiylik sozlamalarini ochish", "Открыть настройки конфиденциальности", "Open Privacy settings")) {
                     NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy")!)
                 }
                 .controlSize(.small)
             }
 
-            Section("Tizim") {
+            Section(tr("Tizim", "Система", "System")) {
                 Toggle(isOn: loginBinding) {
-                    described("Mac yoqilganda ishga tushsin", "Menyu satrida o'zi paydo bo'ladi.")
+                    described(tr("Mac yoqilganda ishga tushsin", "Запускать при входе", "Launch at login"),
+                              tr("Menyu satrida o'zi paydo bo'ladi.",
+                                 "Значок сам появится в строке меню.",
+                                 "The icon appears in the menu bar by itself."))
                 }
                 .toggleStyle(.switch)
                 if loginStatus == .requiresApproval {
-                    LabeledContent("macOS tasdig'ini kutmoqda") {
-                        Button("Login Items'ni ochish") { SMAppService.openSystemSettingsLoginItems() }
-                            .controlSize(.small)
+                    LabeledContent(tr("macOS tasdig'ini kutmoqda", "Ждёт подтверждения macOS", "Waiting for macOS approval")) {
+                        Button(tr("Login Items'ni ochish", "Открыть «Объекты входа»", "Open Login Items")) {
+                            SMAppService.openSystemSettingsLoginItems()
+                        }
+                        .controlSize(.small)
                     }
                 }
             }
@@ -221,15 +250,25 @@ private struct GeneralPane: View {
 
     private var modeDescription: String {
         switch DisplayMode(rawValue: mode) ?? .mixed {
-        case .music: "Qum musiqaning notasiga qarab Xladni naqshlarini chizadi."
-        case .clock: "Qum hozirgi vaqtni chizadi. Soniya almashsa, faqat o'sha raqamning qumi sakraydi."
-        case .mixed: "Musiqa chalinsa Xladni naqshlari, musiqa to'xtasa qum soatga aylanadi."
+        case .music:
+            tr("Qum musiqaning notasiga qarab Xladni naqshlarini chizadi.",
+               "Песок рисует фигуры Хладни по ноте, на которой построена музыка.",
+               "The sand draws Chladni figures from the note the music is built on.")
+        case .clock:
+            tr("Qum hozirgi vaqtni chizadi. Soniya almashsa, faqat o'sha raqamning qumi sakraydi.",
+               "Песок рисует текущее время. Когда меняется секунда, подпрыгивает только песок этой цифры.",
+               "The sand draws the current time. When a second ticks, only that digit's sand jumps.")
+        case .mixed:
+            tr("Musiqa chalinsa Xladni naqshlari, musiqa to'xtasa qum soatga aylanadi.",
+               "Пока играет музыка — фигуры Хладни, когда она стихает — песок собирается в часы.",
+               "Chladni figures while music plays; when it stops, the sand turns into a clock.")
         }
     }
 
     static func duration(_ seconds: Double) -> String {
         let total = Int(seconds)
-        return total < 60 ? "\(total) s" : total % 60 == 0 ? "\(total / 60) daq" : "\(total / 60) daq \(total % 60) s"
+        let s = tr("s", "с", "s"), min = tr("daq", "мин", "min")
+        return total < 60 ? "\(total) \(s)" : total % 60 == 0 ? "\(total / 60) \(min)" : "\(total / 60) \(min) \(total % 60) \(s)"
     }
 
     private var loginBinding: Binding<Bool> {
@@ -262,47 +301,49 @@ private struct AppearancePane: View {
 
     var body: some View {
         Form {
-            Section("Soat") {
-                Picker("Ko'rinishi", selection: $clockStyle) {
-                    Text("Raqamli").tag(ClockStyle.digital.rawValue)
-                    Text("Doira").tag(ClockStyle.analog.rawValue)
-                    Text("Halqalar").tag(ClockStyle.rings.rawValue)
+            Section(tr("Soat", "Часы", "Clock")) {
+                Picker(tr("Ko'rinishi", "Стиль", "Style"), selection: $clockStyle) {
+                    Text(tr("Raqamli", "Цифровые", "Digital")).tag(ClockStyle.digital.rawValue)
+                    Text(tr("Doira", "Циферблат", "Analog")).tag(ClockStyle.analog.rawValue)
+                    Text(tr("Halqalar", "Кольца", "Rings")).tag(ClockStyle.rings.rawValue)
                 }
                 .pickerStyle(.segmented)
-                Toggle("Soniyalarni ko'rsatish", isOn: $showSeconds)
+                Toggle(tr("Soniyalarni ko'rsatish", "Показывать секунды", "Show seconds"), isOn: $showSeconds)
                     .toggleStyle(.switch)
             }
 
-            Section("Plastinka") {
-                Picker("Shakl", selection: $shape) {
-                    Text("Kvadrat").tag(PlateField.Shape.square.rawValue)
-                    Text("Doira").tag(PlateField.Shape.circle.rawValue)
+            Section(tr("Plastinka", "Пластина", "Plate")) {
+                Picker(tr("Shakl", "Форма", "Shape"), selection: $shape) {
+                    Text(tr("Kvadrat", "Квадрат", "Square")).tag(PlateField.Shape.square.rawValue)
+                    Text(tr("Doira", "Круг", "Circle")).tag(PlateField.Shape.circle.rawValue)
                 }
                 .pickerStyle(.segmented)
-                LabeledContent("Qum miqdori") {
+                LabeledContent(tr("Qum miqdori", "Количество песка", "Amount of sand")) {
                     HStack(spacing: 12) {
                         Slider(value: rounded($grainDraft, to: 10_000), in: 20_000...300_000) { editing in
                             if !editing { grainCount = Int(grainDraft) }
                         }
                         .frame(width: 180)
-                        Text("\(Int(grainDraft) / 1000) ming")
+                        Text(tr("\(Int(grainDraft) / 1000) ming", "\(Int(grainDraft) / 1000) тыс.", "\(Int(grainDraft) / 1000)k"))
                             .monospacedDigit()
                             .foregroundStyle(.secondary)
                             .frame(width: 70, alignment: .trailing)
                     }
                 }
                 Toggle(isOn: $showCaption) {
-                    described("Nota va chastotani ko'rsatish",
-                              "Naqsh almashganda pastda bir necha soniya xira yozuv chiqadi.")
+                    described(tr("Nota va chastotani ko'rsatish", "Показывать ноту и частоту", "Show note and frequency"),
+                              tr("Naqsh almashganda pastda bir necha soniya xira yozuv chiqadi.",
+                                 "При смене фигуры внизу на несколько секунд появляется тусклая подпись.",
+                                 "A dim caption appears at the bottom for a few seconds when the figure changes."))
                 }
                 .toggleStyle(.switch)
             }
 
-            Section("Joylashuv") {
-                LabeledContent("Ekrandagi joyi") {
+            Section(tr("Joylashuv", "Расположение", "Placement")) {
+                LabeledContent(tr("Ekrandagi joyi", "Место на экране", "Position")) {
                     PlacementGrid(selection: $placement)
                 }
-                LabeledContent("O'lchami") {
+                LabeledContent(tr("O'lchami", "Размер", "Size")) {
                     HStack(spacing: 12) {
                         Slider(value: rounded($plateSize, to: 0.05), in: 0.4...1.2)
                             .frame(width: 180)
@@ -312,14 +353,14 @@ private struct AppearancePane: View {
                             .frame(width: 70, alignment: .trailing)
                     }
                 }
-                Picker("Qaysi ekranda", selection: $screenID) {
-                    Text("Avtomatik (Mac ekrani)").tag(0)
+                Picker(tr("Qaysi ekranda", "Экран", "Display"), selection: $screenID) {
+                    Text(tr("Avtomatik (Mac ekrani)", "Авто (экран Mac)", "Automatic (built-in)")).tag(0)
                     ForEach(NSScreen.screens, id: \.displayID) { screen in
                         Text(screen.localizedName).tag(Int(screen.displayID))
                     }
                 }
                 .pickerStyle(.radioGroup)
-                Picker("Kadr tezligi", selection: $framesPerSecond) {
+                Picker(tr("Kadr tezligi", "Частота кадров", "Frame rate"), selection: $framesPerSecond) {
                     Text("60 FPS").tag(60)
                     Text("120 FPS").tag(120)
                 }
@@ -328,9 +369,9 @@ private struct AppearancePane: View {
 
             Section {
                 HStack(spacing: 8) {
-                    Button("Hozir ko'rish", action: actions.showNow)
+                    Button(tr("Hozir ko'rish", "Показать сейчас", "Show now"), action: actions.showNow)
                         .controlSize(.small)
-                    Button("Qumni qayta sepish", action: actions.rescatter)
+                    Button(tr("Qumni qayta sepish", "Рассыпать песок заново", "Re-sprinkle the sand"), action: actions.rescatter)
                         .controlSize(.small)
                 }
             }
@@ -352,9 +393,13 @@ private struct AboutPane: View {
                 }
                 .padding(.vertical, 4)
             }
-            Section("Bu nima") {
-                Text("Qora tebranuvchi plastinkadagi oltin qum. Qo'shiqning asosiy notasi plastinkaning tebranish shaklini tanlaydi, qum esa qimirlamaydigan chiziqlarga yig'iladi. Akkord almashsa, qum sakrab yangi naqsh hosil qiladi.")
-                Text("1787-yilda Ernst Xladni skripka kamoni bilan qum sepilgan plastinkada xuddi shu naqshlarni ko'rsatgan. Bu bezak emas, shu fizikaning simulyatsiyasi.")
+            Section(tr("Bu nima", "Что это", "What it is")) {
+                Text(tr("Qora tebranuvchi plastinkadagi oltin qum. Qo'shiqning asosiy notasi plastinkaning tebranish shaklini tanlaydi, qum esa qimirlamaydigan chiziqlarga yig'iladi. Akkord almashsa, qum sakrab yangi naqsh hosil qiladi.",
+                        "Золотой песок на чёрной вибрирующей пластине. Основная нота песни выбирает форму колебаний пластины, а песок собирается на неподвижных линиях. Когда меняется аккорд, песок подпрыгивает и складывается в новую фигуру.",
+                        "Golden sand on a black vibrating plate. The song's main note picks how the plate vibrates, and the sand gathers on the lines that stay still. When the chord changes, the sand jumps and forms a new figure."))
+                Text(tr("1787-yilda Ernst Xladni skripka kamoni bilan qum sepilgan plastinkada xuddi shu naqshlarni ko'rsatgan. Bu bezak emas, shu fizikaning simulyatsiyasi.",
+                        "В 1787 году Эрнст Хладни показал те же узоры, проводя смычком скрипки по посыпанной песком пластине. Это не украшение, а симуляция той же физики.",
+                        "In 1787 Ernst Chladni showed these same patterns by bowing a sand-covered plate with a violin bow. This is not decoration but a simulation of that physics."))
                     .foregroundStyle(.secondary)
             }
         }

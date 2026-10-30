@@ -10,6 +10,7 @@ struct LaunchOptions {
     var showNow = false
     var stay = false
     var openSettings = false
+    var settingsTab: SettingsTab?
     var file: String?
     var snapshot: String?
     var analyze: String?
@@ -43,6 +44,7 @@ struct LaunchOptions {
             case "--show": showNow = true
             case "--stay": stay = true
             case "--settings": openSettings = true
+            case "--settings-tab": openSettings = true; settingsTab = SettingsTab(rawValue: iterator.next() ?? "")
             case "--file": file = iterator.next()
             case "--snapshot": snapshot = iterator.next()
             case "--analyze": analyze = iterator.next()

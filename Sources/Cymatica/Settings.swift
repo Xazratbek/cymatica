@@ -109,9 +109,9 @@ enum DisplayMode: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .music: "Musiqa"
-        case .clock: "Soat"
-        case .mixed: "Aralash"
+        case .music: tr("Musiqa", "Музыка", "Music")
+        case .clock: tr("Soat", "Часы", "Clock")
+        case .mixed: tr("Aralash", "Смешанный", "Mixed")
         }
     }
 }
@@ -126,15 +126,15 @@ enum Placement: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .center: "Markazda"
-        case .left: "Chapda"
-        case .right: "O'ngda"
-        case .topLeft: "Yuqori chapda"
-        case .topRight: "Yuqori o'ngda"
-        case .bottomLeft: "Pastki chapda"
-        case .bottomRight: "Pastki o'ngda"
-        case .top: "Tepada"
-        case .bottom: "Pastda"
+        case .center: tr("Markazda", "По центру", "Center")
+        case .left: tr("Chapda", "Слева", "Left")
+        case .right: tr("O'ngda", "Справа", "Right")
+        case .topLeft: tr("Yuqori chapda", "Вверху слева", "Top left")
+        case .topRight: tr("Yuqori o'ngda", "Вверху справа", "Top right")
+        case .bottomLeft: tr("Pastki chapda", "Внизу слева", "Bottom left")
+        case .bottomRight: tr("Pastki o'ngda", "Внизу справа", "Bottom right")
+        case .top: tr("Tepada", "Вверху", "Top")
+        case .bottom: tr("Pastda", "Внизу", "Bottom")
         }
     }
 

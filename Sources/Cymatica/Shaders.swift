@@ -77,10 +77,16 @@ inline float plateEnergy(float2 p, constant SimUniforms &U, device const float *
     return energy;
 }
 
-// Clock "energy": 0 on the strokes, rising to 1 within `falloff` of them. `toward`
-// points at the nearest stroke.
-inline float clockEnergy(float2 p, device const ClockStroke *strokes, uint count, float falloff,
-                         thread float2 &toward) {
+// Bakes the clock strokes into a field texture covering the plate: x = distance to the
+// nearest stroke edge (negative inside), yz = unit vector toward it. Runs only when the
+// displayed time changes, so grains pay one texture read per frame instead of a loop
+// over every stroke.
+kernel void bakeClockField(texture2d<float, access::write> field [[texture(0)]],
+                           device const ClockStroke *strokes [[buffer(0)]],
+                           constant uint &count [[buffer(1)]],
+                           uint2 gid [[thread_position_in_grid]]) {
+    if (gid.x >= field.get_width() || gid.y >= field.get_height()) return;
+    float2 p = (float2(gid) + 0.5) / float2(field.get_width(), field.get_height()) * 2.0 - 1.0;
     float best = 1e9;
     float2 nearest = p;
     for (uint i = 0; i < count; i++) {
@@ -93,9 +99,17 @@ inline float clockEnergy(float2 p, device const ClockStroke *strokes, uint count
     }
     float2 delta = nearest - p;
     float len = length(delta);
-    toward = len > 1e-6 ? delta / len : float2(0.0);
-    float e = saturate(best / falloff);
-    return count == 0 ? 0.0 : e * e;
+    field.write(float4(best, len > 1e-6 ? delta / len : float2(0.0), 0.0), gid);
+}
+
+// Clock "energy": 0 on the strokes, rising to 1 within `falloff` of them. `toward`
+// points at the nearest stroke.
+inline float clockEnergy(float2 p, texture2d<float> field, float falloff, thread float2 &toward) {
+    float4 f = field.sample(linearClamp, p * 0.5 + 0.5);
+    float len = length(f.yz);
+    toward = len > 1e-4 ? f.yz / len : float2(0.0);
+    float e = saturate(f.x / falloff);
+    return e * e;
 }
 
 kernel void scatterGrains(device Grain *grains [[buffer(0)]],
@@ -121,7 +135,7 @@ kernel void scatterGrains(device Grain *grains [[buffer(0)]],
 kernel void simulateGrains(device Grain *grains [[buffer(0)]],
                            constant SimUniforms &U [[buffer(1)]],
                            device const float *profiles [[buffer(2)]],
-                           device const ClockStroke *strokes [[buffer(3)]],
+                           texture2d<float> clockField [[texture(0)]],
                            uint id [[thread_position_in_grid]]) {
     if (id >= U.grainCount) return;
     Grain g = grains[id];
@@ -137,8 +151,9 @@ kernel void simulateGrains(device Grain *grains [[buffer(0)]],
     if (height <= 0.0) {
         float energy = 0.0;
         float2 toward = float2(0.0);
-        if (clockMix < 1.0) energy += (1.0 - clockMix) * plateEnergy(pos, U, profiles);
-        if (clockMix > 0.0) energy += clockMix * max(clockEnergy(pos, strokes, U.clockCount, U.clock.w, toward), U.clock.y);
+        // A still plate (silence, music mode) cannot throw anything: skip the field.
+        if (clockMix < 1.0 && U.drive > 0.0) energy += (1.0 - clockMix) * plateEnergy(pos, U, profiles);
+        if (clockMix > 0.0) energy += clockMix * max(U.clockCount > 0 ? clockEnergy(pos, clockField, U.clock.w, toward) : 0.0, U.clock.y);
         float accel = U.drive * U.gain * sqrt(energy);   // plate acceleration in units of g
         float launch = smoothstep(U.threshold, U.threshold * 1.6, accel);
         if (launch > 0.0 && random01(s) < launch * (1.0 - exp(-dt * 55.0))) {

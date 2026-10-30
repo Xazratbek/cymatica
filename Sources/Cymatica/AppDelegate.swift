@@ -30,7 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var aod: AODController!
     private var levels: LevelMonitor!
     private var statusItem: NSStatusItem!
-    private var audioProblem: String?
+    /// Why audio capture failed, kept raw so the message follows the interface language.
+    private var audioFailure: (isFile: Bool, detail: String)?
 
     init(options: LaunchOptions) {
         self.options = options
@@ -56,7 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 sampleRate = player.sampleRate
                 filePlayer = player
             } catch {
-                audioProblem = "Fayl ochilmadi: \(error.localizedDescription)"
+                audioFailure = (true, error.localizedDescription)
             }
         } else if !options.demo {
             let tap = SystemAudioTap(ring: ring)
@@ -64,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 try tap.start()
                 sampleRate = tap.sampleRate
             } catch {
-                audioProblem = "Tizim ovozi ulanmadi: \(error)"
+                audioFailure = (false, "\(error)")
                 NSLog("Cymatica: \(error)")
             }
             self.tap = tap
@@ -92,11 +93,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if self.settings.showCaption { self.aod.flashCaption(caption) }
         }
 
-        let audioStatus = audioProblem ?? (options.demo ? "Demo (ovozsiz)" : options.file != nil ? "Fayl" : "Tizim ovozi (Core Audio tap)")
+
         SettingsWindowController.actions = SettingsActions(
             showNow: { [unowned self] in self.aod.show(auto: false) },
             rescatter: { [unowned self] in self.visualizer.renderer.scatter() },
-            audioStatus: { audioStatus })
+            audioStatus: { [unowned self] in self.audioStatus })
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil,
                                                queue: .main) { [unowned self] _ in self.applySettings() }
 
@@ -111,7 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         applySettings()
         aod.start()
         if options.openSettings {
-            SettingsWindowController.show()
+            SettingsWindowController.show(tab: options.settingsTab)
         }
         if options.showNow || options.demo || options.file != nil {
             aod.show(auto: false)
@@ -122,11 +123,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         tap?.stop()
     }
 
+    private var audioProblem: String? {
+        guard let audioFailure else { return nil }
+        let reason = audioFailure.isFile
+            ? tr("Fayl ochilmadi", "Не удалось открыть файл", "Could not open the file")
+            : tr("Tizim ovozi ulanmadi", "Системный звук недоступен", "System audio unavailable")
+        return "\(reason): \(audioFailure.detail)"
+    }
+
+    private var audioStatus: String {
+        if let audioProblem { return audioProblem }
+        if options.demo { return tr("Demo (ovozsiz)", "Демо (без звука)", "Demo (no audio)") }
+        if options.file != nil { return tr("Fayl", "Файл", "File") }
+        return tr("Tizim ovozi (Core Audio tap)", "Системный звук (Core Audio tap)", "System audio (Core Audio tap)")
+    }
+
     // MARK: - Menu
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        menu.addItem(ActionItem("Hozir yoqish", key: "s") { [unowned self] in self.aod.show(auto: false) })
+        menu.addItem(ActionItem(tr("Hozir yoqish", "Показать сейчас", "Show now"), key: "s") { [unowned self] in self.aod.show(auto: false) })
         if let audioProblem {
             let item = NSMenuItem(title: audioProblem, action: nil, keyEquivalent: "")
             item.isEnabled = false
@@ -134,20 +150,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(.separator())
         for mode in DisplayMode.allCases {
-            menu.addItem(ActionItem("Rejim: \(mode.title)", checked: settings.mode == mode) { [unowned self] in
+            menu.addItem(ActionItem("\(tr("Rejim", "Режим", "Mode")): \(mode.title)", checked: settings.mode == mode) { [unowned self] in
                 self.settings.mode = mode
             })
         }
-        menu.addItem(ActionItem("Musiqa ritmiga moslashsin", checked: settings.followRhythm) { [unowned self] in
+        menu.addItem(ActionItem(tr("Musiqa ritmiga moslashsin", "Следовать ритму музыки", "Follow the rhythm"), checked: settings.followRhythm) { [unowned self] in
             self.settings.followRhythm.toggle()
         })
         menu.addItem(.separator())
-        menu.addItem(ActionItem("Avtomatik yoqilsin", checked: settings.autoMode) { [unowned self] in
+        menu.addItem(ActionItem(tr("Avtomatik yoqilsin", "Включаться автоматически", "Turn on automatically"), checked: settings.autoMode) { [unowned self] in
             self.settings.autoMode.toggle()
         })
-        menu.addItem(ActionItem("Sozlamalar…", key: ",") { SettingsWindowController.show() })
+        menu.addItem(ActionItem(tr("Sozlamalar…", "Настройки…", "Settings…"), key: ",") { SettingsWindowController.show() })
         menu.addItem(.separator())
-        menu.addItem(ActionItem("Chiqish", key: "q") { NSApp.terminate(nil) })
+        menu.addItem(ActionItem(tr("Chiqish", "Выйти", "Quit"), key: "q") { NSApp.terminate(nil) })
     }
 
     /// Applies settings that need the renderer or the view to change. The rest

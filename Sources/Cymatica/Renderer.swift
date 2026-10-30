@@ -65,6 +65,8 @@ struct FrameInput {
     var placement: SIMD3<Float> = SIMD3(0, 0, 1)
     /// Multiplies how high grains are thrown; the rhythm option raises it on beats.
     var hopBoost: Float = 1
+    /// Multiplies sand brightness and bloom; the rhythm option flares it on beats.
+    var glow: Float = 1
 }
 
 /// Slow orbit around the plate. With `reading` at 1 it turns to face the viewer
@@ -160,11 +162,15 @@ final class Renderer {
     private var scatteredShape: PlateField.Shape?
     private var clockStrokes: MTLBuffer
     private var clockStrokeCount = 0
+    /// Distance-to-stroke field for the clock, rebuilt only when the strokes change.
+    private let clockField: MTLTexture
+    private var needsBake = false
     private var frameIndex: UInt32 = 0
 
     private let library: MTLLibrary
     private let scatterPipeline: MTLComputePipelineState
     private let simulatePipeline: MTLComputePipelineState
+    private let bakePipeline: MTLComputePipelineState
     private let grainPipeline: MTLRenderPipelineState
     private let rimPipeline: MTLRenderPipelineState
     private let downsamplePipeline: MTLRenderPipelineState
@@ -184,17 +190,20 @@ final class Renderer {
               let profiles = device.makeBuffer(length: PlateField.profileLength * PlateField.slotCount * 4,
                                                options: .storageModeShared),
               let grains = device.makeBuffer(length: grainCount * 32, options: .storageModePrivate),
-              let clockStrokes = device.makeBuffer(length: MemoryLayout<ClockStroke>.stride, options: .storageModeShared)
+              let clockStrokes = device.makeBuffer(length: MemoryLayout<ClockStroke>.stride, options: .storageModeShared),
+              let clockField = Self.makeFieldTexture(device)
         else { throw RendererError.allocation }
         self.queue = queue
         self.profiles = profiles
         self.grains = grains
         self.clockStrokes = clockStrokes
+        self.clockField = clockField
         self.grainCount = grainCount
 
         library = try device.makeLibrary(source: ShaderSource.metal, options: nil)
         scatterPipeline = try device.makeComputePipelineState(function: try Self.function("scatterGrains", in: library))
         simulatePipeline = try device.makeComputePipelineState(function: try Self.function("simulateGrains", in: library))
+        bakePipeline = try device.makeComputePipelineState(function: try Self.function("bakeClockField", in: library))
         grainPipeline = try Self.pipeline(device, library, vertex: "grainVertex", fragment: "grainFragment", additive: true)
         rimPipeline = try Self.pipeline(device, library, vertex: "rimVertex", fragment: "rimFragment", additive: true)
         downsamplePipeline = try Self.pipeline(device, library, vertex: "fullscreenVertex", fragment: "bloomDownsample", additive: false)
@@ -238,6 +247,7 @@ final class Renderer {
         else { return }
         clockStrokes = buffer
         clockStrokeCount = strokes.count
+        needsBake = true
     }
 
     func encode(_ input: FrameInput, to target: MTLTexture, in commandBuffer: MTLCommandBuffer) {
@@ -258,6 +268,17 @@ final class Renderer {
             blit.endEncoding()
             pendingCopy = nil
         }
+        if needsBake, clockStrokeCount > 0, let bake = commandBuffer.makeComputeCommandEncoder() {
+            var count = UInt32(clockStrokeCount)
+            bake.setComputePipelineState(bakePipeline)
+            bake.setTexture(clockField, index: 0)
+            bake.setBuffer(clockStrokes, offset: 0, index: 0)
+            bake.setBytes(&count, length: MemoryLayout<UInt32>.stride, index: 1)
+            bake.dispatchThreads(MTLSize(width: clockField.width, height: clockField.height, depth: 1),
+                                 threadsPerThreadgroup: MTLSize(width: 16, height: 16, depth: 1))
+            bake.endEncoding()
+            needsBake = false
+        }
         guard let encoder = commandBuffer.makeComputeCommandEncoder() else { return }
         let shapeChanged = scatteredShape != input.shape
         let modes = input.modes + Array(repeating: SIMD4<Float>.zero, count: max(0, 4 - input.modes.count))
@@ -275,7 +296,7 @@ final class Renderer {
         encoder.setBuffer(grains, offset: 0, index: 0)
         encoder.setBytes(&uniforms, length: MemoryLayout<SimUniforms>.stride, index: 1)
         encoder.setBuffer(profiles, offset: 0, index: 2)
-        encoder.setBuffer(clockStrokes, offset: 0, index: 3)
+        encoder.setTexture(clockField, index: 0)
         if needsScatter || shapeChanged {
             encoder.setComputePipelineState(scatterPipeline)
             encoder.dispatchThreads(threads, threadsPerThreadgroup: group)
@@ -316,7 +337,7 @@ final class Renderer {
             sparkColor: SIMD4(1.0, 0.86, 0.62, 1),
             halfVector: SIMD4(halfVector, glint),
             pointSize: max(grainSize * Float(scene.height) / 1964 * max(sqrt(place.z), 0.7), 1.1),
-            intensity: grainIntensity,
+            intensity: grainIntensity * input.glow,
             sparkle: sparkle,
             time: input.time)
 
@@ -353,7 +374,7 @@ final class Renderer {
         pass.colorAttachments[0].loadAction = .dontCare
         pass.colorAttachments[0].storeAction = .store
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
-        var uniforms = CompositeUniforms(bloomStrength: bloomStrength, exposure: exposure,
+        var uniforms = CompositeUniforms(bloomStrength: bloomStrength * input.glow, exposure: exposure,
                                          headroom: max(input.headroom, 1), blackFloor: blackFloor)
         encoder.setRenderPipelineState(pipeline)
         encoder.setFragmentTexture(scene, index: 0)
@@ -385,6 +406,16 @@ final class Renderer {
         bloomLevels = (1...4).compactMap { level in
             makeTexture(width: max(width >> level, 1), height: max(height >> level, 1))
         }
+    }
+
+    /// 1024² over the plate: about 0.002 plate units per texel, finer than the thinnest
+    /// stroke, so sampling it draws the same clock the per-stroke loop did.
+    private static func makeFieldTexture(_ device: MTLDevice) -> MTLTexture? {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba16Float, width: 1024,
+                                                                  height: 1024, mipmapped: false)
+        descriptor.usage = [.shaderRead, .shaderWrite]
+        descriptor.storageMode = .private
+        return device.makeTexture(descriptor: descriptor)
     }
 
     private func makeTexture(width: Int, height: Int) -> MTLTexture? {

@@ -1,6 +1,8 @@
-# Cymatica
+<p align="center"><img src="docs/icon.png" width="128" alt="Cymatica icon"></p>
 
-Golden sand that dances to your music: a Chladni-figure always-on display for macOS.
+<h1 align="center">Cymatica</h1>
+
+<p align="center">Golden sand that dances to your music: a Chladni-figure always-on display for macOS.</p>
 
 <table>
   <tr>
@@ -31,9 +33,10 @@ nodal lines. Quiet passages draw simple figures and choruses draw intricate ones
 | **Clock** | The current time, as digits, an analog face, or rings. When a second ticks, only that digit's (or hand's) sand jumps |
 | **Mixed** (default) | Chladni figures while music plays, the clock a few seconds after it stops |
 
-**Follow the rhythm** is an optional switch. With it on, the sand jumps on every beat
-and the figure flips with the beat. Hops grow with the hit, and the camera speeds up
-in loud passages. Without it, the plate follows harmony only. The colour always
+**Follow the rhythm** is an optional switch. With it on, the loose sand between the
+lines leaps on every beat and the figure flares, while the sand on the lines stays put
+so the figure stays readable. The figure changes once per bar, and the camera speeds
+up in loud passages. Without it, the plate follows harmony only. The colour always
 follows the key: warm gold for major, pale champagne for minor.
 
 <p align="center"><img src="docs/analog.jpg" width="49%" alt="Analog clock in sand">
@@ -61,16 +64,19 @@ The build is ad-hoc signed, so after rebuilding macOS may ask again.
 
 ## Using it
 
-The interface is in Uzbek. The menu bar icon offers **Show now** (⌘S), the three modes, **Follow the rhythm**,
-**Automatic**, and **Settings…** (⌘,). The settings window has:
+The interface speaks **English, Russian and Uzbek**. Pick one at the top of
+Settings › General; it switches instantly. The menu bar icon offers **Show now** (⌘S),
+the three modes, **Follow the rhythm**, **Turn on automatically**, and **Settings…** (⌘,).
+The settings window has:
 
-- **General:** mode, rhythm, idle time before the plate appears, *show even without
-  music* (a phone-style always-on clock), *stay hidden while a video plays*, *keys do not
-  close it* (then only the trackpad or mouse does), launch at login
+- **General:** language, mode, rhythm, idle time before the plate appears, *also
+  without music* (a phone-style always-on clock), *stay hidden during video*, *keys do
+  not close it* (then only the trackpad or mouse does), launch at login
 - **Appearance:** clock style and seconds, plate shape (square or circle), amount of
   sand, position on screen (3 × 3 grid) and size, which display, 60/120 FPS
 
-<p align="center"><img src="docs/settings.jpg" width="70%" alt="Settings window"></p>
+<p align="center"><img src="docs/settings-general.jpg" width="49%" alt="Settings: General">
+<img src="docs/settings-appearance.jpg" width="49%" alt="Settings: Appearance"></p>
 
 ## How it works
 
@@ -86,11 +92,15 @@ The interface is in Uzbek. The menu bar icon offers **Show now** (⌘S), the thr
   `cos(nπx)·cos(mπy) ± cos(mπx)·cos(nπy)` with frequency ∝ m² + n². The circular plate
   uses `J_n(k·r)·cos(nθ)`. A grain only hops when the plate under it accelerates harder
   than gravity, so it comes to rest where the plate barely moves: on the nodal lines.
-  In clock mode the field is the distance to the digit or hand strokes instead.
+  In clock mode the field is the distance to the digit or hand strokes instead. It is
+  baked into a 1024² texture once per second, when the time changes, so each grain pays
+  one texture read per frame rather than a loop over hundreds of strokes.
 - **Rendering.** The grains live only on the GPU: a Metal compute pass moves them and
   additive point sprites draw them into a float target. A dual-filter bloom adds the
   glow, and the composite writes EDR values on XDR displays. Empty space stays at
   exactly 0, so mini-LED zones there remain off.
+- **Cost.** With 300,000 grains at 3024 × 1964 on an M2 Pro, a frame takes about 1 ms of
+  GPU time in every mode. Audio analysis runs at most 60 times a second even at 120 FPS.
 - **Power.** Rendering stops while the plate is hidden, which costs about 0.1% CPU. The
   display is kept awake only while the plate is showing music or the always-on clock.
 
@@ -139,4 +149,5 @@ sakratadi.
 
 Ishga tushirish: `./build_app.sh`, keyin `open build/Cymatica.app`. Birinchi safar
 "System Audio Recording" ruxsatiga **Allow** bosing. Sozlamalar menyu satridagi ✦
-belgisidan ochiladi (⌘,).
+belgisidan ochiladi (⌘,). Ilova tili o'zbek, rus yoki ingliz — Sozlamalar › Umumiy
+bo'limining eng tepasida tanlanadi.

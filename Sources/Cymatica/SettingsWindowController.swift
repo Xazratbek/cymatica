@@ -34,6 +34,7 @@ enum AppActivationPolicy {
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private static var shared: SettingsWindowController?
     static var actions = SettingsActions()
+    private var languageObserver: NSObjectProtocol?
 
     static func show(tab: SettingsTab? = nil) {
         if let tab {
@@ -55,7 +56,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         )
         super.init(window: window)
 
-        window.title = "Sozlamalar"
+        window.title = tr("Sozlamalar", "Настройки", "Settings")
+        languageObserver = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification,
+                                                                  object: nil, queue: .main) { [weak window] _ in
+            MainActor.assumeIsolated { window?.title = tr("Sozlamalar", "Настройки", "Settings") }
+        }
         window.titleVisibility = .visible
         window.toolbarStyle = .automatic
         window.isMovableByWindowBackground = true
@@ -78,6 +83,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        if let languageObserver { NotificationCenter.default.removeObserver(languageObserver) }
         AppActivationPolicy.leave()
         Self.shared = nil
     }
