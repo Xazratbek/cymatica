@@ -1,0 +1,206 @@
+MUSIQA UCHUN "ALWAYS ON DISPLAY" — G'OYALAR TO'PLAMI
+=====================================================
+
+Umumiy tamoyil
+--------------
+Oddiy vizualizatorlar (to'lqin, aylana, beatga sakraydigan ustunlar) xotirasiz ishlaydi:
+hozirgi soniyaga reaksiya qiladi va darhol unutadi. Bu yerdagi g'oyalar boshqacha:
+musiqa nimadir quradi, o'stiradi, iz qoldiradi. Rang va shakl asosan beatdan emas,
+garmoniyadan (akkord, tonallik), qo'shiq tuzilishidan (kuplet, naqarot, drop) va
+tovushning fizik xususiyatlaridan keladi.
+
+Ekran: MacBook Pro M2 Pro, Liquid Retina XDR (mini-LED). Sof qora (#000) joylarda
+diodlar butunlay o'chadi, shuning uchun hamma g'oyalar "qorong'ilikda suzib turgan
+yorug'lik" estetikasiga moslab o'ylangan. Fon har doim aynan 0 bo'lishi kerak:
+ozgina kulrang tuman ham mini-LED zonalarini yoqib, gardish (halo) hosil qiladi.
+
+Tanlangan va hozir qurilayotgan g'oya: 3. Xladni qumi (kimatika).
+Quyida qolgan g'oyalar batafsil yozilgan.
+
+
+1. QO'SHIQ FOSILI
+-----------------
+Mohiyati
+  Qop-qora ekran o'rtasida yorug'likdan yasalgan buyum sekin aylanadi va pastdan
+  yuqoriga qatlam-qatlam "bosiladi" — kulolchilik charxi bilan 3D printer o'rtasidagi
+  narsa. Qo'shiq tugaganda buyum tayyor bo'ladi: har bir qo'shiqning o'z jismi bor.
+
+Qanday o'sadi
+  - Har lahza (taxminan soniyasiga 8 ta) bitta yupqa halqa qo'shiladi.
+  - Halqaning shakli spektrdan olinadi: halqa atrofidagi har bir burchak bitta
+    chastota diapazoniga mos keladi. Bass katta, yumaloq bo'rtiqlar beradi, baland
+    chastotalar mayda, tishli to'lqinlar beradi.
+  - Halqa radiusi baland-pastlikka bog'liq: jim joyda buyumning "bo'yni" ingichkalashadi,
+    naqarotda kengayadi, drop kelsa keskin tikan yoki yoriq paydo bo'ladi.
+  - Qo'shiq davomiyligi Spotify / Apple Music'dan olinadi, shuning uchun buyum
+    balandligi qo'shiq uzunligiga qarab oldindan taqsimlanadi. Davomiylik noma'lum
+    bo'lsa, kamera asta uzoqlashib, buyum cheksiz o'saveradi.
+
+Rang va material
+  - Rang garmoniyadan: akkord va tonallik xromagramma orqali aniqlanadi va
+    sinesteziya xaritasiga (Skryabin uslubida) tushadi. Minor qo'shiqlar sovuq
+    ko'k-binafsha, major qo'shiqlar iliq oltin-qahrabo tusda.
+  - Hozir bosilayotgan yuqori qirra cho'g'dek qizarib yonadi (EDR yorqinligida),
+    pastki qatlamlar asta soviydi va qorayadi.
+  - Qo'shiq tugaganda buyum to'liq qotadi: qo'shiq xarakteriga qarab obsidian,
+    tutunli shisha yoki chinni materialiga aylanadi. Ustiga qo'shiq nomi va ijrochi
+    ingichka harflar bilan o'yib yoziladi.
+
+Xotira — "oqshom muzeyi"
+  - Tayyor buyum qorong'i javonga siljiydi, o'rtada yangi qo'shiqning buyumi o'sa
+    boshlaydi.
+  - Kun davomida javonlar to'lib boradi. Kechqurun ekranda bugun eshitgan barcha
+    qo'shiqlaringizning shisha vazalar kolleksiyasi turadi; kamera ular orasida sekin
+    yuradi.
+  - Bir qo'shiq har safar deyarli bir xil shakl beradi (ovoz balandligi AGC bilan
+    tenglashtiriladi), shuning uchun vaqt o'tib qo'shiqni shaklidan tanib olasiz.
+
+Eng "crazy" qismi
+  - Istalgan buyumni STL formatida eksport qilish: sevimli qo'shiqni 3D printerda
+    chiqarib, stolga qo'yish mumkin. Qo'shiq haqiqiy jismga aylanadi.
+
+Texnik yo'l
+  - Swift + Metal. Har halqa ~128 nuqta, 4 daqiqalik qo'shiqda ~2000 halqa:
+    ~256 ming uchli bitta mesh, GPU uchun juda yengil.
+  - Material uchun oddiy PBR + subsurface yolg'onchi effekt (shisha/chinni uchun).
+  - Javon/muzey holati diskka (JSON + mesh) saqlanadi.
+
+
+2. NOTCH MAXLUQI
+----------------
+Mohiyati
+  MacBook'ning notch'i (kamera kesigi) — maxluqning uyi. Ekran butunlay qora, faqat
+  notch atrofida hayot bor. Eng o'ynoqi va eng kutilmagan variant.
+
+Xatti-harakati
+  - Jimlik: maxluq notch ichida uxlaydi; ba'zan bitta ko'zini ochib qo'yadi.
+  - Musiqa boshlanadi: notch chetidan ikkita yaltiroq ko'z chiqib, atrofga qaraydi.
+  - Temp aniqlanadi: maxluq tempga mos bosh irg'aydi, notch chetida oyoqlarini
+    osiltirib o'tiradi va ritmga tebratadi.
+  - Naqarot / energiya oshganda: notch'dan to'liq chiqib, ekranning yuqori qismi
+    bo'ylab yuguradi, sakraydi.
+  - Drop: ekran bo'ylab katta raqs; orqasidan yorug' iz qoladi.
+  - Sekin, g'amgin qo'shiq: notch chetiga osilib, qo'shiq bilan birga chayqaladi,
+    asta uxlab qoladi.
+  - Kursor qimirlasa: cho'chib ketib, notch ichiga qochib kiradi (always on rejimi
+    yopiladi).
+
+Xarakter
+  - Janr bo'yicha "kayfiyat": elektron musiqada robot harakatlar, jazzda bo'shashgan
+    tebranish, rokda bosh silkitish. Janr spektral belgilar (centroid, onset zichligi,
+    temp) bo'yicha taxmin qilinadi.
+  - Maxluq vaqt o'tishi bilan "o'rganadi": eng ko'p eshitilgan ijrochi qo'shig'i
+    chalinsa, alohida quvonch animatsiyasi.
+
+Texnik yo'l
+  - Prosedural 2.5D animatsiya (spline tana, inverse kinematics oyoqlar), Metal yoki
+    SpriteKit. Notch o'lchami NSScreen.safeAreaInsets / auxiliaryTopLeftArea orqali
+    aniq olinadi.
+  - Tempni aniqlash: onset envelope + avtokorrelyatsiya.
+
+
+4. MUSIQA YULDUZ TURKUMLARI
+---------------------------
+Mohiyati
+  Ekran — tungi osmon. Har bir qo'shiq osmonga o'z yulduz turkumini chizadi. Tun bo'yi
+  osmon siz eshitgan musiqa bilan to'lib boradi. Always on display uchun eng mos
+  variant: ekranning 95 foizi qora, yorug'lik juda kam va sokin.
+
+Qanday chiziladi
+  - Har bir aniq nota yulduzga aylanadi. Joylashuvi: burchak — nota nomi (12 ta
+    pitch class aylana bo'ylab, kvintalar doirasi tartibida), masofa markazdan —
+    oktava.
+  - Yulduz yorqinligi — nota qancha uzoq va baland yangragani.
+  - Garmonik bog'liq notalar (kvinta, terts, oktava) ingichka yorug' chiziq bilan
+    ulanadi. Shu tariqa har akkord kichik uchburchak/ko'pburchak chizadi.
+  - Takrorlanadigan melodiya (naqarot) bir xil chiziqlarni qayta-qayta yurib, ularni
+    yorqinroq qiladi: qo'shiqning "asosiy shakli" o'z-o'zidan ajralib chiqadi.
+
+Qo'shiq tugaganda
+  - Turkum bir nuqtaga yig'ilib, osmonning bo'sh joyiga ko'chadi va u yerda kichik,
+    xira turkum bo'lib qoladi. Yoniga qo'shiq nomi juda xira harflar bilan yoziladi.
+  - Butun osmon sekin aylanadi (xuddi haqiqiy osmon kabi). Tong otganda osmon
+    "tozalanadi" yoki arxivga (rasm sifatida) saqlanadi.
+
+Qo'shimcha
+  - Bir qo'shiq doim bir xil turkum chizadi: o'z "burjlaringiz" paydo bo'ladi.
+  - Tunning oxirida osmonni yuqori aniqlikdagi posterga eksport qilish mumkin.
+
+Texnik yo'l
+  - Nota aniqlash: xromagramma + piklarni kuzatish (polifonik musiqada aniq nota
+    emas, ustun pitch class'lar olinadi).
+  - Render: yulduzlar uchun point sprite + EDR, chiziqlar uchun antialiased line
+    mesh, bloom yarim aniqlikda.
+
+
+5. SHILIMSHIQ MOG'OR (PHYSARUM)
+-------------------------------
+Mohiyati
+  Physarum polycephalum — tabiatda mavjud bir hujayrali organizm. U ovqat izlab
+  yo'llar quradi va Tokio metro xaritasini qayta "ixtiro qila oladigan" darajada
+  samarali tarmoqlar hosil qiladi. Ekranda million agent shunday tirik tarmoq o'radi,
+  musiqa esa uning "oziq-ovqati".
+
+Musiqa bilan bog'lanishi
+  - Har bir agent oldidagi izni hidlab, eng kuchli iz tomon buriladi va o'z izini
+    qoldiradi. Natijada neyron tarmoq yoki daryo deltasi kabi oltin tomirlar paydo
+    bo'ladi.
+  - Bass: tomirlar bo'ylab oziq to'lqini yuboradi — yorug' impuls markazdan chetga
+    oqib o'tadi (yurak urishi kabi, lekin beatga emas, bass energiyasiga).
+  - Baland chastotalar: agentlarning sezgich burchagini o'zgartiradi — tarmoq yangi,
+    mayda shoxlar ochadi.
+  - Garmoniya: tarmoqning rangi va "kayfiyati" (major — keng, ochiq tomirlar;
+    minor — zich, tarmoqlangan to'r).
+  - Jimlik: organizm "och qoladi", tomirlar asta yupqalashib, faqat eng kuchli yo'llar
+    qoladi. Musiqa qaytsa, tarmoq yana gullaydi.
+
+Ko'rinishi
+  - Qop-qora fonda oltin, qahrabo yoki bioluminessent ko'k tomirlar. Kamera sekin
+    yaqinlashib-uzoqlashadi, chuqurlik hissi uchun tomirlarga yengil 3D relyef
+    (height map + yorug'lik) beriladi.
+
+Texnik yo'l
+  - Metal compute: agentlar bufer, iz maydoni (trail map) teksturada; diffuziya va
+    so'nish har kadrda. M2 Pro million agentni 60 kadrda bemalol ko'taradi.
+  - Iz so'nishi aniq 0 gacha qirqiladi (mini-LED halo bo'lmasligi uchun).
+
+
+CYMATICA UCHUN KEYINGI REJIM G'OYALARI
+======================================
+Cymatica'da hozir uchta rejim bor: Musiqa (Xladni naqshlari), Soat (raqamli, doira,
+halqalar) va Aralash. Quyidagilar o'sha qum fizikasiga qo'shilishi mumkin bo'lgan
+yangi "nimani chizadi" g'oyalari.
+
+Qum soati
+  Plastinkaning yuqori yarmida qum uyumi, o'rtada tor bo'yin. Har daqiqada bir
+  necha yuz zarra bo'yindan pastga oqib tushadi; soat boshida plastinka "ag'darilib",
+  qum yana tepaga sakraydi. Pomodoro taymer sifatida ham ishlaydi: 25 daqiqada
+  qum tugaydi.
+
+O'zbekcha so'z-soat
+  Qum harflardan jumla yozadi: "o'n ikkidan o'n besh daqiqa o'tdi". Har besh
+  daqiqada faqat o'zgargan so'z sochilib, yangi so'z bo'lib yig'iladi.
+
+Quyosh soati
+  Plastinka o'rtasida tayoqcha, uning "soyasi" qumdan chiziladi va kun bo'yi
+  haqiqiy quyosh burchagiga qarab aylanadi. Kechasi soya o'rniga oy fazasi chiziladi.
+
+Oy fazasi va sana
+  Qum bugungi oy shaklini (yarim oy, to'lin oy) va hafta kunini chizadi.
+  Always on display uchun sokin, kamdan-kam o'zgaradigan ko'rinish.
+
+Ikkilik (binary) soat
+  Soat, daqiqa, soniya — uch qator qum nuqtalari, yoniq bit qumga to'la, o'chig'i
+  bo'sh. Geometrik, deyarli Xladni naqshidek ko'rinadi.
+
+Bildirishnoma hisoblagichi
+  Telegram yoki Mail'dagi o'qilmagan xabarlar soni qumdan katta raqam bo'lib
+  chiziladi; yangi xabar kelganda qum bir marta "portlaydi".
+
+Qo'shiq nomi
+  Yangi qo'shiq boshlanganda qum bir necha soniya qo'shiq nomini yozadi, keyin
+  sochilib Xladni naqshlariga qaytadi.
+
+Nafas olish mashqi
+  Qum doira bo'lib sekin kengayadi (nafas olish) va torayadi (nafas chiqarish),
+  4-7-8 ritmida. Uxlashdan oldin tinchlantiruvchi rejim.
